@@ -102,6 +102,7 @@
     "minimist": "1.2.0",
     "mkdirp-then": "1.2.0",
     "nanoid": "1.2.1",
+    "newrelic": "^5.6.3",
     "path-to-regexp": "2.1.0",
     "prop-types": "15.6.2",
     "prop-types-exact": "1.2.0",
