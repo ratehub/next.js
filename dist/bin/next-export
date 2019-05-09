@@ -51,13 +51,11 @@ var options = {
   silent: argv.silent,
   outdir: argv.outdir ? (0, _path.resolve)(argv.outdir) : (0, _path.resolve)(dir, 'out')
 };
+(0, _export.default)(dir, options).then(function () {
+  console.log('Export successful, sending to NewRelic'); // printAndExit('Export successful', 0)
+}).catch(function (err) {
+  _newrelic.default.noticeError(err);
 
-var exportWrapper = function exportWrapper() {
-  return (0, _export.default)(dir, options).then(function () {
-    (0, _utils.printAndExit)('Export successful', 0);
-  }).catch(function (err) {
-    (0, _utils.printAndExit)(err);
-  });
-};
-
-_newrelic.default.startBackgroundTransaction('next-export', exportWrapper);
+  console.error(err);
+  console.log('Sending to NewRelic'); // printAndExit(err)
+});

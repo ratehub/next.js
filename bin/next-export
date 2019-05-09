@@ -58,12 +58,14 @@ const options = {
   outdir: argv.outdir ? resolve(argv.outdir) : resolve(dir, 'out')
 }
 
-const exportWrapper = () => exportApp(dir, options)
+exportApp(dir, options)
   .then(() => {
-    printAndExit('Export successful', 0)
+    console.log('Export successful, sending to NewRelic')
+    // printAndExit('Export successful', 0)
   })
   .catch((err) => {
-    printAndExit(err)
+    newrelic.noticeError(err)
+    console.error(err)
+    console.log('Sending to NewRelic')
+    // printAndExit(err)
   })
-
-newrelic.startBackgroundTransaction('next-export', exportWrapper)

@@ -3,6 +3,7 @@ import cp from 'recursive-copy'
 import mkdirp from 'mkdirp-then'
 import { extname, resolve, join, dirname, sep } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import newrelic from 'newrelic'
 import loadConfig from '../server/config'
 import {PHASE_EXPORT, SERVER_DIRECTORY, PAGES_MANIFEST, CONFIG_FILE, BUILD_ID_FILE, CLIENT_STATIC_FILES_PATH} from '../lib/constants'
 import { renderToHTML } from '../server/render'
@@ -134,7 +135,23 @@ export default async function (dir, options, configuration) {
 
     await mkdirp(baseDir)
 
-    const html = await renderToHTML(req, res, page, query, renderOpts)
+    const html = await newrelic.startBackgroundTransaction(page === '/' ? '/index' : page,
+      async () => {
+        const trans = newrelic.getTransaction()
+        newrelic.addCustomAttribute('url', req.url)
+        newrelic.addCustomAttribute('query', query)
+        return ((t) => {
+          return renderToHTML(req, res, page, query, renderOpts)
+            .then((html) => {
+              return new Promise((resolve, reject) => {
+                t.end(() => {
+                  resolve(html)
+                })
+              })
+            })
+        })(trans)
+      }
+    )
     writeFileSync(htmlFilepath, html, 'utf8')
   }
 
