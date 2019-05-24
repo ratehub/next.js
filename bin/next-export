@@ -60,12 +60,15 @@ const options = {
 
 exportApp(dir, options)
   .then(() => {
-    console.log('Export successful, sending to NewRelic')
+    console.log('Export successful')
     // printAndExit('Export successful', 0)
   })
   .catch((err) => {
     newrelic.noticeError(err)
     console.error(err)
-    console.log('Sending to NewRelic')
     // printAndExit(err)
+  })
+  .finally(() => {
+    newrelic.shutdown({collectPendingData: true})
+    console.log('Sending to NewRelic')
   })

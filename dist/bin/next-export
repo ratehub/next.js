@@ -52,10 +52,15 @@ var options = {
   outdir: argv.outdir ? (0, _path.resolve)(argv.outdir) : (0, _path.resolve)(dir, 'out')
 };
 (0, _export.default)(dir, options).then(function () {
-  console.log('Export successful, sending to NewRelic'); // printAndExit('Export successful', 0)
+  console.log('Export successful'); // printAndExit('Export successful', 0)
 }).catch(function (err) {
   _newrelic.default.noticeError(err);
 
-  console.error(err);
-  console.log('Sending to NewRelic'); // printAndExit(err)
+  console.error(err); // printAndExit(err)
+}).finally(function () {
+  _newrelic.default.shutdown({
+    collectPendingData: true
+  });
+
+  console.log('Sending to NewRelic');
 });
