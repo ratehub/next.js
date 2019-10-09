@@ -21,6 +21,7 @@ export type NextComponentType<
    * @param ctx Context of `page`
    */
   getInitialProps?(context: C): IP | Promise<IP>
+  doInit?(context: C): any | Promise<any>
 }
 
 export type DocumentType = NextComponentType<
@@ -295,15 +296,24 @@ export async function loadGetInitialProps<
 
   if (!App.getInitialProps) {
     if (ctx.ctx && ctx.Component) {
+      const [pageProps] = await Promise.all([
+        loadGetInitialProps(ctx.Component, ctx.ctx),
+        ctx.Component.doInit
+          ? ctx.Component.doInit(ctx.ctx)
+          : Promise.resolve(),
+      ])
       // @ts-ignore pageProps default
       return {
-        pageProps: await loadGetInitialProps(ctx.Component, ctx.ctx),
+        pageProps: pageProps,
       }
     }
     return {} as IP
   }
 
-  const props = await App.getInitialProps(ctx)
+  const [props] = await Promise.all([
+    App.getInitialProps(ctx),
+    App.doInit ? App.doInit(ctx) : Promise.resolve(),
+  ])
 
   if (res && isResSent(res)) {
     return props

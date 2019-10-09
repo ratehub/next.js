@@ -24,6 +24,7 @@ export default function withRouter<
   WithRouterWrapper.getInitialProps = ComposedComponent.getInitialProps
   // This is needed to allow checking for custom getInitialProps in _app
   ;(WithRouterWrapper as any).origGetInitialProps = (ComposedComponent as any).origGetInitialProps
+  ;(WithRouterWrapper as any).doInit = (ComposedComponent as any).doInit
   if (process.env.NODE_ENV !== 'production') {
     const name =
       ComposedComponent.displayName || ComposedComponent.name || 'Unknown'

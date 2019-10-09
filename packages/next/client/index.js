@@ -360,16 +360,21 @@ export function renderError(props) {
       router,
       ctx: { err, pathname: page, query, asPath, AppTree },
     }
-    return Promise.resolve(
-      props.props ? props.props : loadGetInitialProps(App, appCtx)
-    ).then((initProps) =>
-      doRender({
-        ...props,
-        err,
-        Component: ErrorComponent,
-        props: initProps,
-      })
-    )
+    const [props] = Promise.all([
+        Promise.resolve(
+        props.props ? props.props : loadGetInitialProps(App, appCtx)
+      ).then((initProps) =>
+        doRender({
+          ...props,
+          err,
+          Component: ErrorComponent,
+          props: initProps,
+        })
+      ),
+      App.doInit ? App.doInit() : undefined
+    ]);
+
+    return props;
   })
 }
 
