@@ -482,6 +482,15 @@ const wrapApp = App => props => {
 }
 
 async function doRender({ App, Component, props, err }) {
+  const { pathname, query, asPath } = router
+  const AppTree = wrapApp(App)
+  const appCtx = {
+    router,
+    AppTree,
+    Component: ErrorComponent,
+    ctx: { err, pathname, query, asPath, AppTree },
+  }
+
   // Usual getInitialProps fetching is handled in next/router
   // this is for when ErrorComponent gets replaced by Component by HMR
   if (
@@ -490,15 +499,11 @@ async function doRender({ App, Component, props, err }) {
     Component !== ErrorComponent &&
     lastAppProps.Component === ErrorComponent
   ) {
-    const { pathname, query, asPath } = router
-    const AppTree = wrapApp(App)
-    const appCtx = {
-      router,
-      AppTree,
-      Component: ErrorComponent,
-      ctx: { err, pathname, query, asPath, AppTree },
-    }
     props = await loadGetInitialProps(App, appCtx)
+  }
+
+  if (App.doInit) {
+    await App.doInit(appCtx)
   }
 
   Component = Component || lastAppProps.Component
