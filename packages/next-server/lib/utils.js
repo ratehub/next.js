@@ -39,7 +39,7 @@ export async function loadGetInitialProps (Component, ctx) {
 
   if (!Component.getInitialProps) return {}
 
-  const props = await Component.getInitialProps(ctx)
+  const [props] = await Promise.all([Component.getInitialProps(ctx), Component.doInit ? Component.doInit(ctx) : Promise.resolve()])
 
   if (ctx.res && isResSent(ctx.res)) {
     return props

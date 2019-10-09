@@ -18,6 +18,7 @@ export default function withRouter(ComposedComponent: React.ComponentType<any> &
   }
 
   WithRouteWrapper.getInitialProps = ComposedComponent.getInitialProps
+  WithRouteWrapper.doInit = ComposedComponent.doInit
   if (process.env.NODE_ENV !== 'production') {
     const name = ComposedComponent.displayName || ComposedComponent.name || 'Unknown'
     WithRouteWrapper.displayName = `withRouter(${name})`
