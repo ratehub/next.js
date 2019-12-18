@@ -183,7 +183,6 @@ async function doRender ({ App, Component, props, err }) {
   }
 
   if (App.doInit) {
-    console.log('doing init!!!');
     const { pathname, query, asPath } = router
     await App.doInit({ err, pathname, query, asPath })
   }

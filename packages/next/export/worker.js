@@ -17,12 +17,15 @@ global.__NEXT_DATA__ = {
   nextExport: true
 }
 
-const instrument = (work, exportPathMap) => path => newrelic.startBackgroundTransaction(path, () => {
-  const { query = {} } = exportPathMap[path]
-  newrelic.addCustomAttribute('url', path)
-  newrelic.addCustomAttribute('query', query)
-  return work(path)
-})
+const instrument = (work, exportPathMap) => path => {
+  const reportedPath = path === '/' ? '/index' : path
+  return newrelic.startBackgroundTransaction(reportedPath, () => {
+    const { query = {} } = exportPathMap[path]
+    newrelic.addCustomAttribute('url', reportedPath)
+    newrelic.addCustomAttribute('query', query)
+    return work(path)
+  })
+}
 
 process.on(
   'message',
