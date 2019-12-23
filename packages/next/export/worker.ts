@@ -19,6 +19,8 @@ import { normalizeLocalePath } from '../next-server/lib/i18n/normalize-locale-pa
 import { tracer, traceAsyncFn } from '../build/tracer'
 import opentelemetryApi from '@opentelemetry/api'
 
+import newrelic from 'newrelic'
+
 const envConfig = require('../next-server/lib/runtime-config')
 
 ;(global as any).__NEXT_DATA__ = {
@@ -58,7 +60,7 @@ interface ExportPageInput {
 interface ExportPageResults {
   ampValidations: AmpValidation[]
   fromBuildExportRevalidate?: number
-  error?: boolean
+  error?: Error
   ssgNotFound?: boolean
 }
 
@@ -84,7 +86,7 @@ type ComponentModule = ComponentType<{}> & {
   getStaticProps?: GetStaticProps
 }
 
-export default async function exportPage({
+async function exportPage({
   spanContext,
   path,
   pathMap,
@@ -454,9 +456,30 @@ export default async function exportPage({
             `\nError occurred prerendering page "${path}". Read more: https://err.sh/next.js/prerender-error\n` +
               error.stack
           )
-          return { ...results, error: true }
+          return { ...results, error: error }
         }
       })
     }
   )
 }
+
+const withNewRelic = (work: Function) => (
+  args: ExportPageInput
+): Promise<ExportPageResults> =>
+  newrelic.startBackgroundTransaction(args.pathMap.page, async () => {
+    const { path, pathMap } = args
+    const { query = {} } = pathMap
+    newrelic.addCustomAttribute('url', path)
+    newrelic.addCustomAttribute('query', serializeQuery(query))
+    const results = await work(args)
+    if (results.error) {
+      newrelic.noticeError(results.error)
+    }
+    return results
+  })
+
+function serializeQuery(query: any): string {
+  return query.length ? query.join(', ') : query
+}
+
+export default withNewRelic(exportPage)
