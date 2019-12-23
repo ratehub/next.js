@@ -14,6 +14,8 @@ import { IncomingMessage, ServerResponse } from 'http'
 import { ComponentType } from 'react'
 import { GetStaticProps } from '../types'
 
+import newrelic from 'newrelic'
+
 const envConfig = require('../next-server/lib/runtime-config')
 
 ;(global as any).__NEXT_DATA__ = {
@@ -33,7 +35,7 @@ interface PathMap {
   query?: { [key: string]: string | string[] }
 }
 
-interface ExortPageInput {
+interface ExportPageInput {
   path: string
   pathMap: PathMap
   distDir: string
@@ -68,7 +70,7 @@ type ComponentModule = ComponentType<{}> & {
   getStaticProps?: GetStaticProps
 }
 
-export default async function exportPage({
+async function exportPage({
   path,
   pathMap,
   distDir,
@@ -80,7 +82,7 @@ export default async function exportPage({
   serverRuntimeConfig,
   subFolders,
   serverless,
-}: ExortPageInput): Promise<ExportPageResults> {
+}: ExportPageInput): Promise<ExportPageResults> {
   let results: ExportPageResults = {
     ampValidations: [],
   }
@@ -353,3 +355,23 @@ export default async function exportPage({
     return { ...results, error: true }
   }
 }
+
+const withNewRelic = (work : Function) =>
+  (args : ExportPageInput) : Promise<ExportPageResults> =>
+    newrelic.startBackgroundTransaction(args.pathMap.page, async () => {
+      const { path, pathMap } = args
+      const { query = {} } = pathMap
+      newrelic.addCustomAttribute('url', path)
+      newrelic.addCustomAttribute('query', serializeQuery(query))
+      const results = await work(args)
+      if (results.error) {
+        newrelic.noticeError(results.error)
+      }
+      return results
+    })
+
+function serializeQuery(query : any) : string {
+  return query.length ? query.join(', ') : query;
+}
+
+export default withNewRelic(exportPage);
