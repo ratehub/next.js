@@ -18,13 +18,15 @@ if (!global.fetch) {
   global.fetch = fetch
 }
 
+import newrelic from 'newrelic'
+
 const envConfig = require('../next-server/lib/runtime-config')
 
 global.__NEXT_DATA__ = {
   nextExport: true,
 }
 
-export default async function({
+const work = async function({
   path,
   pathMap,
   distDir,
@@ -286,6 +288,21 @@ export default async function({
       `\nError occurred prerendering page "${path}". Read more: https://err.sh/next.js/prerender-error:\n` +
         error
     )
-    return { ...results, error: true }
+    return { ...results, error: error }
   }
 }
+
+const withNewRelic = work => args =>
+  newrelic.startBackgroundTransaction(args.pathMap.page, async () => {
+    const { path, pathMap } = args
+    const { query = {} } = pathMap
+    newrelic.addCustomAttribute('url', path)
+    newrelic.addCustomAttribute('query', query)
+    const results = await work(args)
+    if (results.error) {
+      newrelic.noticeError(results.error)
+    }
+    return results
+  })
+
+export default withNewRelic(work)
