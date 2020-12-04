@@ -508,6 +508,16 @@ export default class DevServer extends Server {
           throw err
         }
 
+        const potentialRoutes = (this.dynamicRoutes || [])
+          .filter(route => !!route.match(pathname))
+          .map(route => this.hotReloader!.ensurePage(route.page))
+
+        if (potentialRoutes.length) {
+          return Promise.all(potentialRoutes)
+        }
+
+        throw err
+        /*
         for (const dynamicRoute of this.dynamicRoutes || []) {
           const params = dynamicRoute.match(pathname)
           if (!params) {
@@ -517,6 +527,7 @@ export default class DevServer extends Server {
           return this.hotReloader!.ensurePage(dynamicRoute.page)
         }
         throw err
+ */
       })
     } catch (err) {
       if (err.code === 'ENOENT') {
