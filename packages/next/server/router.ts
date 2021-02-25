@@ -7,6 +7,8 @@ import { normalizeLocalePath } from '../shared/lib/i18n/normalize-locale-path'
 import { RouteHas } from '../lib/load-custom-routes'
 import { matchHas } from '../shared/lib/router/utils/prepare-destination'
 
+import { GetStaticPathsResult } from "../types";
+
 export const route = pathMatch()
 
 export type Params = { [param: string]: any }
@@ -36,7 +38,11 @@ export type Route = {
   ) => Promise<RouteResult> | RouteResult
 }
 
-export type DynamicRoutes = Array<{ page: string; match: RouteMatch }>
+export type DynamicRoutes = Array<{
+  page: string
+  match: RouteMatch
+  staticPaths?: GetStaticPathsResult | undefined
+}>
 
 export type PageChecker = (pathname: string) => Promise<boolean>
 
