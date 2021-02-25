@@ -1570,7 +1570,7 @@ export default abstract class Server<ServerOptions extends Options = Options> {
 
   protected async renderPageComponent(
     ctx: RequestContext,
-    bubbleNoFallback: boolean
+    bubbleNoFallback: boolean,
   ) {
     const { query, pathname } = ctx
 
@@ -1622,11 +1622,72 @@ export default abstract class Server<ServerOptions extends Options = Options> {
       }
 
       if (this.dynamicRoutes) {
+        const pageFilter: string[] =
+          process.env.EXPORT_PAGE_FILTER &&
+          JSON.parse(process.env.EXPORT_PAGE_FILTER)
+
         for (const dynamicRoute of this.dynamicRoutes) {
           const params = dynamicRoute.match(pathname)
-          if (!params) {
+          const includePage =
+              !pageFilter ||
+              (pageFilter?.[0] === '!' &&
+                  !pageFilter.some(
+                      (pagePrefix) =>
+                          pagePrefix.startsWith('/') ||
+                          Object.keys(params).some((param) =>
+                              param.startsWith(pagePrefix)
+                          ) ||
+                          // special case for root (/) matching [[...xyz]]
+                          (params && Object.keys(params).length === 0)
+                  )) ||
+              (pageFilter?.[0] !== '!' &&
+                  pageFilter.some(
+                      (pagePrefix) =>
+                          pagePrefix.startsWith('/') ||
+                          Object.keys(params).some((param) =>
+                              param.startsWith(pagePrefix)
+                          ) ||
+                          // special case for root (/) matching [[...xyz]]
+                          (params && Object.keys(params).length === 0)
+                  ))
+
+          if (!params || !includePage) {
             continue
           }
+
+          let dynamicRouteResult
+          if (!dynamicRoute.staticPaths) {
+            dynamicRouteResult = await this.findPageComponents({
+                pathname: dynamicRoute.page,
+                query,
+                params,
+                isAppPath: false
+            })
+
+            if (!dynamicRouteResult) continue
+
+            const hasStaticPaths =
+                !!dynamicRouteResult.components.getStaticPaths
+            if (hasStaticPaths) {
+              dynamicRoute.staticPaths =
+                  await dynamicRouteResult.components.getStaticPaths?.({})
+            }
+          }
+
+          if (
+              !dynamicRoute.staticPaths ||
+              dynamicRoute.staticPaths.paths.every(
+                  (pathname) =>
+                      typeof pathname === 'string' ||
+                      (JSON.stringify(pathname.params) !== JSON.stringify(params) &&
+                          // special case for root (/) matching [[...xyz]]
+                          Object.keys(params).length !== 0 &&
+                          Object.values(pathname.params)?.[0].length !== 0)
+              )
+          ) {
+            continue
+          }
+
           page = dynamicRoute.page
           const result = await this.renderPageComponent(
             {

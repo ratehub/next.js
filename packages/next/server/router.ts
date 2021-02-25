@@ -17,6 +17,8 @@ import { getRequestMeta } from './request-meta'
 import { formatNextPathnameInfo } from '../shared/lib/router/utils/format-next-pathname-info'
 import { getNextPathnameInfo } from '../shared/lib/router/utils/get-next-pathname-info'
 
+import { GetStaticPathsResult } from "../types";
+
 type RouteResult = {
   finished: boolean
   pathname?: string
@@ -44,7 +46,11 @@ export type Route = {
   ) => Promise<RouteResult> | RouteResult
 }
 
-export type DynamicRoutes = Array<{ page: string; match: RouteMatch }>
+export type DynamicRoutes = Array<{
+  page: string
+  match: RouteMatch
+  staticPaths?: GetStaticPathsResult | undefined
+}>
 
 export type PageChecker = (pathname: string) => Promise<boolean>
 
