@@ -588,14 +588,16 @@ export default class DevServer extends Server {
           throw err
         }
 
-        for (const dynamicRoute of this.dynamicRoutes || []) {
-          const params = dynamicRoute.match(pathname)
-          if (!params) {
-            continue
-          }
+        const potentialRoutes = (this.dynamicRoutes || [])
+          .filter((dynamicRoute) => !!dynamicRoute.match(pathname))
+          .map((dynamicRoute) =>
+            this.hotReloader!.ensurePage(dynamicRoute.page)
+          )
 
-          return this.hotReloader!.ensurePage(dynamicRoute.page)
+        if (potentialRoutes.length) {
+          return Promise.all(potentialRoutes)
         }
+
         throw err
       })
     } catch (err) {

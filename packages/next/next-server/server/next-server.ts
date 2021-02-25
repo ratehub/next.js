@@ -1816,6 +1816,17 @@ export default class Server {
             continue
           }
 
+          if (!dynamicRoute.static) {
+            dynamicRoute.static = await this.getStaticPaths(dynamicRoute.page)
+          }
+
+          if (
+            !dynamicRoute.static ||
+            !dynamicRoute.static.staticPaths?.includes(pathname)
+          ) {
+            continue
+          }
+
           const dynamicRouteResult = await this.findPageComponents(
             dynamicRoute.page,
             query,

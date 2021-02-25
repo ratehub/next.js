@@ -33,7 +33,14 @@ export type Route = {
   ) => Promise<RouteResult> | RouteResult
 }
 
-export type DynamicRoutes = Array<{ page: string; match: RouteMatch }>
+export type DynamicRoutes = Array<{
+  page: string
+  match: RouteMatch
+  static?: {
+    staticPaths: string[] | undefined
+    fallbackMode: 'static' | 'blocking' | false
+  }
+}>
 
 export type PageChecker = (pathname: string) => Promise<boolean>
 
