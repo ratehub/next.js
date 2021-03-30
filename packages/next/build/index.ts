@@ -1,7 +1,7 @@
 import { loadEnvConfig } from '@next/env'
 import chalk from 'chalk'
 import crypto from 'crypto'
-import { promises, writeFileSync } from 'fs'
+import { promises, readFileSync, writeFileSync } from 'fs'
 import { Worker } from 'jest-worker'
 import devalue from 'next/dist/compiled/devalue'
 import escapeStringRegexp from 'next/dist/compiled/escape-string-regexp'
@@ -119,7 +119,13 @@ export default async function build(
   dir: string,
   conf = null,
   reactProductionProfiling = false,
-  debugOutput = false
+  debugOutput = false,
+  {
+    exportOnly = process.env.NEXT_EXPORT_ONLY || false,
+    exportPageFilter = process.env.NEXT_BUILD_ONLY ?
+        [] : process.env.EXPORT_PAGE_FILTER && JSON.parse(process.env.EXPORT_PAGE_FILTER),
+    exportUrlFilter = process.env.EXPORT_URL_FILTER && JSON.parse(process.env.EXPORT_URL_FILTER)
+  } = {}
 ): Promise<void> {
   const nextBuildSpan = trace('next-build')
 
@@ -133,10 +139,13 @@ export default async function build(
       .traceChild('load-next-config')
       .traceAsyncFn(() => loadConfig(PHASE_PRODUCTION_BUILD, dir, conf))
     const { target } = config
-    const buildId: string = await nextBuildSpan
-      .traceChild('generate-buildid')
-      .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
+
     const distDir = path.join(dir, config.distDir)
+    const buildId: string = exportOnly
+      ? readFileSync(path.join(distDir, BUILD_ID_FILE), 'utf8')
+      : await nextBuildSpan
+          .traceChild('generate-buildid')
+          .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
 
     const customRoutes: CustomRoutes = await nextBuildSpan
       .traceChild('load-custom-routes')
@@ -527,6 +536,7 @@ export default async function build(
         ])
       )
 
+  if (!exportOnly) {
     const clientConfig = configs[0]
 
     if (
@@ -629,6 +639,11 @@ export default async function build(
         Log.info('Compiled successfully')
       }
     }
+  } else {
+    if (buildSpinner) {
+      buildSpinner.stopAndPersist()
+    }
+  }
 
     const postCompileSpinner = createSpinner({
       prefixText: `${Log.prefixes.info} Collecting page data`,
@@ -666,7 +681,9 @@ export default async function build(
       process.env.NEXT_PHASE = PHASE_PRODUCTION_BUILD
 
       const staticCheckWorkers = new Worker(staticCheckWorker, {
-        numWorkers: config.experimental.cpus,
+        numWorkers: process.env.NEXT_EXPORT_THREADS
+          ? parseInt(process.env.NEXT_EXPORT_THREADS)
+          : 1,
         enableWorkerThreads: config.experimental.workerThreads,
       }) as Worker & typeof import('./utils')
 
@@ -677,6 +694,8 @@ export default async function build(
         publicRuntimeConfig: config.publicRuntimeConfig,
         serverRuntimeConfig: config.serverRuntimeConfig,
       }
+      runtimeEnvConfig.serverRuntimeConfig.exportPageFilter = exportPageFilter
+      runtimeEnvConfig.serverRuntimeConfig.exportUrlFilter = exportUrlFilter
 
       const nonStaticErrorPageSpan = staticCheckSpan.traceChild(
         'check-static-error-page'
