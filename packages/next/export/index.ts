@@ -45,6 +45,8 @@ import { getPagePath } from '../server/require'
 import { trace, Span } from '../trace'
 import { FontConfig } from '../server/font-utils'
 
+import newrelic from 'newrelic'
+
 const exists = promisify(existsOrig)
 
 function divideSegments(number: number, segments: number): number[] {
@@ -145,7 +147,9 @@ export default async function exportApp(
   span?: Span,
   configuration?: NextConfigComplete
 ): Promise<void> {
-  const nextExportSpan = !!span ? span.traceChild('next-export') : trace('next-export')
+  const nextExportSpan = !!span
+    ? span.traceChild('next-export')
+    : trace('next-export')
 
   return nextExportSpan.traceAsyncFn(async () => {
     dir = resolve(dir)
@@ -719,13 +723,18 @@ export default async function exportApp(
     }
 
     if (renderError) {
-      throw new Error(
-        `Export encountered errors on following paths:\n\t${errorPaths
-          .sort()
-          .join('\n\t')}`
-      )
+      const errorDescription = `Export encountered errors on following paths:\n\t${errorPaths
+        .sort()
+        .join('\n\t')}`
+
+      if (!process.env.NEXT_EXPORT_CONTINUE_ON_ERROR) {
+        throw new Error(errorDescription)
+      } else {
+        console.log(errorDescription)
+      }
     }
 
+    // indicate URLs that did succeed can be copied to output directory
     writeFileSync(
       join(distDir, EXPORT_DETAIL),
       JSON.stringify({

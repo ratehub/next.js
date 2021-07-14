@@ -609,7 +609,10 @@ const withNewRelic =
       newrelic.addCustomAttribute('query', serializeQuery(query))
       const results = await work(args)
       if (results.error) {
-        newrelic.noticeError(results.error)
+        newrelic.noticeError(results.error, {
+          url: path,
+          query: serializeQuery(query),
+        })
       }
       return results
     })
