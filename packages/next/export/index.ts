@@ -718,7 +718,7 @@ export default async function exportApp(
       )
     }
 
-    if (renderError) {
+    if (renderError && !process.env.NEXT_EXPORT_CONTINUE_ON_ERROR) {
       throw new Error(
         `Export encountered errors on following paths:\n\t${errorPaths
           .sort()
@@ -726,6 +726,7 @@ export default async function exportApp(
       )
     }
 
+    // indicate URLs that did succeed can be copied to output directory
     writeFileSync(
       join(distDir, EXPORT_DETAIL),
       JSON.stringify({
