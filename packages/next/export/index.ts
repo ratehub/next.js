@@ -443,15 +443,6 @@ export default async function exportApp(
       if (!exportPathMap['/404']) {
         exportPathMap['/404'] = { page: '/_error' }
       }
-
-      /**
-       * exports 404.html for backwards compat
-       * E.g. GitHub Pages, GitLab Pages, Cloudflare Pages, Netlify
-       */
-      if (!exportPathMap['/404.html']) {
-        // alias /404.html to /404 to be compatible with custom 404 / _error page
-        exportPathMap['/404.html'] = exportPathMap['/404']
-      }
     }
 
     // make sure to prevent duplicates
