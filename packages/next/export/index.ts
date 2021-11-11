@@ -414,7 +414,7 @@ export default async function exportApp(
       !exportPathMap['/404'] &&
       !exportPathMap['/404.html']
     ) {
-      exportPathMap['/404'] = exportPathMap['/404.html'] = {
+      exportPathMap['/404'] = {
         page: '/_error',
       }
     }
