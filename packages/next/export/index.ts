@@ -42,7 +42,7 @@ import { loadEnvConfig } from '@next/env'
 import { PrerenderManifest } from '../build'
 import { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin'
 import { getPagePath } from '../server/require'
-import { Span } from '../trace'
+import { trace, Span } from '../trace'
 import { FontConfig } from '../server/font-utils'
 
 const exists = promisify(existsOrig)
@@ -142,10 +142,10 @@ interface ExportOptions {
 export default async function exportApp(
   dir: string,
   options: ExportOptions,
-  span: Span,
+  span?: Span,
   configuration?: NextConfigComplete
 ): Promise<void> {
-  const nextExportSpan = span.traceChild('next-export')
+  const nextExportSpan = !!span ? span.traceChild('next-export') : trace('next-export')
 
   return nextExportSpan.traceAsyncFn(async () => {
     dir = resolve(dir)
