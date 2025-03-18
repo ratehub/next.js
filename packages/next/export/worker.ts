@@ -29,7 +29,10 @@ import isError from '../lib/is-error'
 import { addRequestMeta } from '../server/request-meta'
 import { normalizeAppPath } from '../shared/lib/router/utils/app-paths'
 
+import newrelic from 'newrelic'
+
 loadRequireHook()
+
 const envConfig = require('../shared/lib/runtime-config')
 
 ;(global as any).__NEXT_DATA__ = {
@@ -72,7 +75,7 @@ interface ExportPageInput {
 interface ExportPageResults {
   ampValidations: AmpValidation[]
   fromBuildExportRevalidate?: number
-  error?: boolean
+  error?: Error
   ssgNotFound?: boolean
   duration: number
 }
@@ -99,7 +102,7 @@ type ComponentModule = ComponentType<{}> & {
   getStaticProps?: GetStaticProps
 }
 
-export default async function exportPage({
+async function exportPage({
   parentSpanId,
   path,
   pathMap,
@@ -588,8 +591,34 @@ export default async function exportPage({
         `\nError occurred prerendering page "${path}". Read more: https://nextjs.org/docs/messages/prerender-error\n` +
           (isError(error) && error.stack ? error.stack : error)
       )
-      results.error = true
+      if (error instanceof Error) {
+        results.error = error
+      }
     }
     return { ...results, duration: Date.now() - start }
   })
 }
+
+const withNewRelic =
+  (work: Function) =>
+  (args: ExportPageInput): Promise<ExportPageResults> =>
+    newrelic.startBackgroundTransaction(args.pathMap.page, async () => {
+      const { path, pathMap } = args
+      const { query = {} } = pathMap
+      newrelic.addCustomAttribute('url', path)
+      newrelic.addCustomAttribute('query', serializeQuery(query))
+      const results = await work(args)
+      if (results.error) {
+        newrelic.noticeError(results.error, {
+          url: path,
+          query: serializeQuery(query),
+        })
+      }
+      return results
+    })
+
+function serializeQuery(query: any): string {
+  return query.length ? query.join(', ') : query
+}
+
+export default withNewRelic(exportPage)

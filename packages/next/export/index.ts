@@ -42,8 +42,10 @@ import { loadEnvConfig } from '@next/env'
 import { PrerenderManifest } from '../build'
 import { PagesManifest } from '../build/webpack/plugins/pages-manifest-plugin'
 import { getPagePath } from '../server/require'
-import { Span } from '../trace'
+import { trace, Span } from '../trace'
 import { FontConfig } from '../server/font-utils'
+
+import newrelic from 'newrelic'
 
 const exists = promisify(existsOrig)
 
@@ -142,10 +144,12 @@ interface ExportOptions {
 export default async function exportApp(
   dir: string,
   options: ExportOptions,
-  span: Span,
+  span?: Span,
   configuration?: NextConfigComplete
 ): Promise<void> {
-  const nextExportSpan = span.traceChild('next-export')
+  const nextExportSpan = !!span
+    ? span.traceChild('next-export')
+    : trace('next-export')
 
   return nextExportSpan.traceAsyncFn(async () => {
     dir = resolve(dir)
@@ -439,15 +443,6 @@ export default async function exportApp(
       if (!exportPathMap['/404']) {
         exportPathMap['/404'] = { page: '/_error' }
       }
-
-      /**
-       * exports 404.html for backwards compat
-       * E.g. GitHub Pages, GitLab Pages, Cloudflare Pages, Netlify
-       */
-      if (!exportPathMap['/404.html']) {
-        // alias /404.html to /404 to be compatible with custom 404 / _error page
-        exportPathMap['/404.html'] = exportPathMap['/404']
-      }
     }
 
     // make sure to prevent duplicates
@@ -719,13 +714,18 @@ export default async function exportApp(
     }
 
     if (renderError) {
-      throw new Error(
-        `Export encountered errors on following paths:\n\t${errorPaths
-          .sort()
-          .join('\n\t')}`
-      )
+      const errorDescription = `Export encountered errors on following paths:\n\t${errorPaths
+        .sort()
+        .join('\n\t')}`
+
+      if (!process.env.NEXT_EXPORT_CONTINUE_ON_ERROR) {
+        throw new Error(errorDescription)
+      } else {
+        console.log(errorDescription)
+      }
     }
 
+    // indicate URLs that did succeed can be copied to output directory
     writeFileSync(
       join(distDir, EXPORT_DETAIL),
       JSON.stringify({

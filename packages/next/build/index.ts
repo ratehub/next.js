@@ -3,7 +3,7 @@ import { loadEnvConfig } from '@next/env'
 import chalk from 'next/dist/compiled/chalk'
 import crypto from 'crypto'
 import { isMatch, makeRe } from 'next/dist/compiled/micromatch'
-import { promises, writeFileSync } from 'fs'
+import { promises, writeFileSync, readFileSync } from 'fs'
 import { Worker as JestWorker } from 'next/dist/compiled/jest-worker'
 import { Worker } from '../lib/worker'
 import devalue from 'next/dist/compiled/devalue'
@@ -249,7 +249,13 @@ export default async function build(
   conf = null,
   reactProductionProfiling = false,
   debugOutput = false,
-  runLint = true
+  runLint = true,
+  {
+    exportOnly = process.env.NEXT_EXPORT_ONLY || false,
+    exportPageFilter = process.env.NEXT_BUILD_ONLY ?
+        [] : process.env.EXPORT_PAGE_FILTER && JSON.parse(process.env.EXPORT_PAGE_FILTER),
+    exportUrlFilter = process.env.EXPORT_URL_FILTER && JSON.parse(process.env.EXPORT_URL_FILTER)
+  } = {}
 ): Promise<void> {
   try {
     const nextBuildSpan = trace('next-build', undefined, {
@@ -277,9 +283,12 @@ export default async function build(
         hasReactRoot && !!config.experimental.serverComponents
 
       const { target } = config
-      const buildId: string = await nextBuildSpan
-        .traceChild('generate-buildid')
-        .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
+      const buildId: string = exportOnly
+        ? readFileSync(path.join(distDir, BUILD_ID_FILE), 'utf8')
+        : await nextBuildSpan
+            .traceChild('generate-buildid')
+            .traceAsyncFn(() => generateBuildId(config.generateBuildId, nanoid))
+      console.log(`${exportOnly ? 'Found' : 'Generated'} build ID: ${buildId}`)
 
       const customRoutes: CustomRoutes = await nextBuildSpan
         .traceChild('load-custom-routes')
@@ -845,6 +854,7 @@ export default async function build(
       }
       let webpackBuildStart
       let telemetryPlugin
+    if (!exportOnly) {
       await (async () => {
         // IIFE to isolate locals and avoid retaining memory too long
         const runWebpackSpan = nextBuildSpan.traceChild('run-webpack-compiler')
@@ -1049,6 +1059,11 @@ export default async function build(
           Log.info('Compiled successfully')
         }
       }
+    } else {
+      if (buildSpinner) {
+        buildSpinner.stopAndPersist()
+      }
+    }
 
       const postCompileSpinner = createSpinner({
         prefixText: `${Log.prefixes.info} Collecting page data`,
@@ -1146,7 +1161,9 @@ export default async function build(
             infoPrinted = true
           }
         },
-        numWorkers: config.experimental.cpus,
+        numWorkers: process.env.NEXT_EXPORT_THREADS
+          ? parseInt(process.env.NEXT_EXPORT_THREADS)
+          : 1,
         enableWorkerThreads: config.experimental.workerThreads,
         exposedMethods: sharedPool
           ? [
@@ -1177,6 +1194,8 @@ export default async function build(
         const { configFileName, publicRuntimeConfig, serverRuntimeConfig } =
           config
         const runtimeEnvConfig = { publicRuntimeConfig, serverRuntimeConfig }
+        runtimeEnvConfig.serverRuntimeConfig.exportPageFilter = exportPageFilter
+        runtimeEnvConfig.serverRuntimeConfig.exportUrlFilter = exportUrlFilter
 
         const nonStaticErrorPageSpan = staticCheckSpan.traceChild(
           'check-static-error-page'
@@ -2385,6 +2404,12 @@ export default async function build(
                 const extraRoutes = additionalSsgPaths.get(page) || []
                 for (const route of extraRoutes) {
                   const pageFile = normalizePagePath(route)
+                  try {
+                    await promises.stat(path.join(exportOptions.outdir, `${pageFile}.html`))
+                  } catch (e) {
+                    // this is expected when using NEXT_EXPORT_CONTINUE_ON_ERROR
+                    continue;
+                  }
                   await moveExportedPage(
                     page,
                     route,

@@ -1,6 +1,6 @@
 {
-  "name": "next",
-  "version": "12.3.1",
+  "name": "@ratehub/next",
+  "version": "12.3.1-rh.2",
   "description": "The React Framework",
   "main": "./dist/server/next.js",
   "license": "MIT",
@@ -273,6 +273,21 @@
     "webpack-sources1": "npm:webpack-sources@1.4.3",
     "webpack-sources3": "npm:webpack-sources@3.2.3",
     "ws": "8.2.3"
+  },
+  "optionalDependencies": {
+    "@next/swc-android-arm-eabi": "12.3.1",
+    "@next/swc-android-arm64": "12.3.1",
+    "@next/swc-darwin-arm64": "12.3.1",
+    "@next/swc-darwin-x64": "12.3.1",
+    "@next/swc-freebsd-x64": "12.3.1",
+    "@next/swc-linux-arm-gnueabihf": "12.3.1",
+    "@next/swc-linux-arm64-gnu": "12.3.1",
+    "@next/swc-linux-arm64-musl": "12.3.1",
+    "@next/swc-linux-x64-gnu": "12.3.1",
+    "@next/swc-linux-x64-musl": "12.3.1",
+    "@next/swc-win32-arm64-msvc": "12.3.1",
+    "@next/swc-win32-ia32-msvc": "12.3.1",
+    "@next/swc-win32-x64-msvc": "12.3.1"
   },
   "resolutions": {
     "browserslist": "4.20.2",
