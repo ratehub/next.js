@@ -3065,6 +3065,11 @@ export default abstract class Server<ServerOptions extends Options = Options> {
       i18n: this.i18nProvider?.fromQuery(pathname, query),
     }
 
+    //
+    // Ratehub Patch: Page Filtering
+    // TODO lrobert: Implement base-server.ts changes for page filtering somehow
+    //
+
     try {
       for await (const match of this.matchers.matchAll(pathname, options)) {
         // when a specific invoke-output is meant to be matched

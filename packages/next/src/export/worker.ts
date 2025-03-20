@@ -1,3 +1,5 @@
+import newrelic from 'newrelic'
+
 import type {
   ExportPageInput,
   ExportPageResult,
@@ -327,11 +329,11 @@ async function exportPageImpl(
       console.error(isError(err) && err.stack ? err.stack : err)
     }
 
-    return { error: true }
+    return { error: err }
   }
 }
 
-export default async function exportPage(
+async function exportPage(
   input: ExportPageInput
 ): Promise<ExportPageResult | undefined> {
   // Configure the http agent.
@@ -406,3 +408,36 @@ process.on('rejectionHandled', () => {
   // prefetching patterns to avoid waterfalls. We ignore logging these.
   // We should've already errored in anyway unhandledRejection.
 })
+
+//
+// Ratehub Patch: Add error & newrelic support
+// Reason: We want errors to get reported to our APM
+//         during export.
+//         Currently commented out to see if we even need this.
+//
+function serializeQuery(query: any): string {
+  return query.length ? query.join(', ') : query
+}
+
+const withNewRelic =
+  (work: typeof exportPage) =>
+  async (input: ExportPageInput): Promise<ExportPageResult | undefined> =>
+    newrelic.startBackgroundTransaction(input.pathMap.page, async () => {
+      const { path, pathMap } = input
+      const { query = {} } = pathMap
+      newrelic.addCustomAttribute('url', path)
+      newrelic.addCustomAttribute('query', serializeQuery(query))
+      const results = await work(input)
+
+      if (results?.error) {
+        newrelic.noticeError(results.error, {
+          url: path,
+          query: serializeQuery(query),
+        })
+      }
+
+      return results
+    })
+
+// Disabled for now
+export default withNewRelic(exportPage)

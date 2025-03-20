@@ -692,7 +692,20 @@ export default async function build(
   noMangling = false,
   appDirOnly = false,
   turboNextBuild = false,
-  experimentalBuildMode: 'default' | 'compile' | 'generate'
+  experimentalBuildMode: 'default' | 'compile' | 'generate',
+  //
+  // Ratehub Patch: Separate build from export
+  // Reason: We want to generate a build first and then call export multiple times.
+  //
+  {
+    exportOnly = process.env.NEXT_EXPORT_ONLY || false,
+    exportPageFilter = process.env.NEXT_BUILD_ONLY
+      ? []
+      : process.env.EXPORT_PAGE_FILTER &&
+        JSON.parse(process.env.EXPORT_PAGE_FILTER),
+    exportUrlFilter = process.env.EXPORT_URL_FILTER &&
+      JSON.parse(process.env.EXPORT_URL_FILTER),
+  } = {}
 ): Promise<void> {
   const isCompileMode = experimentalBuildMode === 'compile'
   const isGenerateMode = experimentalBuildMode === 'generate'

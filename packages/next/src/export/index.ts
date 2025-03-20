@@ -464,10 +464,14 @@ export async function exportAppImpl(
      * exports 404.html for backwards compat
      * E.g. GitHub Pages, GitLab Pages, Cloudflare Pages, Netlify
      */
-    if (!exportPathMap['/404.html']) {
-      // alias /404.html to /404 to be compatible with custom 404 / _error page
-      exportPathMap['/404.html'] = exportPathMap['/404']
-    }
+    //
+    // Ratehub Patch: Don't export 404.html
+    // Reason: We don't need the backwards compatability?
+    //
+    // if (!exportPathMap['/404.html']) {
+    //   // alias /404.html to /404 to be compatible with custom 404 / _error page
+    //   exportPathMap['/404.html'] = exportPathMap['/404']
+    // }
   }
 
   // make sure to prevent duplicates
@@ -803,12 +807,25 @@ export async function exportAppImpl(
     )
   }
 
+  //
+  // Ratehub Patch: When a single page fails, log but continue exporting
+  // Reason: When exporting many pages that depend on things like the CMS
+  //         we don't want fail just because a single page failed to export.
+  //         Instead, we want to log the error and move on.
+  //
   if (renderError) {
-    throw new ExportError(
-      `Export encountered errors on following paths:\n\t${errorPaths
-        .sort()
-        .join('\n\t')}`
-    )
+    const errorDescription = `Export encountered errors on following paths:\n\t${errorPaths
+      .sort()
+      .join('\n\t')}`
+    if (
+      process.env.NEXT_EXPORT_CONTINUE_ON_ERROR === 'true' ||
+      process.env.NEXT_EXPORT_CONTINUE_ON_ERROR === 'yes' ||
+      process.env.NEXT_EXPORT_CONTINUE_ON_ERROR === '1'
+    ) {
+      console.error(errorDescription)
+    } else {
+      throw new Error(errorDescription)
+    }
   }
 
   await fs.writeFile(

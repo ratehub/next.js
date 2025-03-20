@@ -84,7 +84,12 @@ export type ExportRouteResult =
       hasPostponed?: boolean
     }
   | {
-      error: boolean
+      //
+      // Ratehub Patch: Return Error instead of boolean
+      //
+      // Reason: This way we can call notice error
+      //
+      error: Error
     }
 
 export type ExportPageResult = ExportRouteResult & {
