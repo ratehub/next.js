@@ -694,6 +694,11 @@ export default async function build(
   turboNextBuild = false,
   experimentalBuildMode: 'default' | 'compile' | 'generate'
 ): Promise<void> {
+  // We have our own flag for this; generate assumes there's already a build just like export-only mode does
+  if (process.env.NEXT_EXPORT_ONLY) {
+    experimentalBuildMode = 'generate'
+  }
+
   const isCompileMode = experimentalBuildMode === 'compile'
   const isGenerateMode = experimentalBuildMode === 'generate'
 
@@ -750,6 +755,9 @@ export default async function build(
         config
       )
       NextBuildContext.buildId = buildId
+      console.log(
+        `${isGenerateMode ? 'Found' : 'Generated'} build ID: ${buildId}`
+      )
 
       const customRoutes: CustomRoutes = await nextBuildSpan
         .traceChild('load-custom-routes')
