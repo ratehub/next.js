@@ -87,11 +87,9 @@ class UrlNode {
       // Strip `[` and `]`, leaving only `something`
       let segmentName = nextSegment.slice(1, -1)
 
-      let isOptional = false
       if (segmentName.startsWith('[') && segmentName.endsWith(']')) {
         // Strip optional `[` and `]`, leaving only `something`
         segmentName = segmentName.slice(1, -1)
-        isOptional = true
       }
 
       if (segmentName.startsWith('...')) {
@@ -110,77 +108,6 @@ class UrlNode {
         throw new Error(
           `Segment names may not start with erroneous periods ('${segmentName}').`
         )
-      }
-
-      function handleSlug(previousSlug: string | null, nextSlug: string) {
-        if (previousSlug !== null) {
-          // If the specific segment already has a slug but the slug is not `something`
-          // This prevents collisions like:
-          // pages/[post]/index.js
-          // pages/[id]/index.js
-          // Because currently multiple dynamic params on the same segment level are not supported
-          if (previousSlug !== nextSlug) {
-            // TODO: This error seems to be confusing for users, needs an error link, the description can be based on above comment.
-            throw new Error(
-              `You cannot use different slug names for the same dynamic path ('${previousSlug}' !== '${nextSlug}').`
-            )
-          }
-        }
-
-        slugNames.forEach((slug) => {
-          if (slug === nextSlug) {
-            throw new Error(
-              `You cannot have the same slug name "${nextSlug}" repeat within a single dynamic path`
-            )
-          }
-
-          if (slug.replace(/\W/g, '') === nextSegment.replace(/\W/g, '')) {
-            throw new Error(
-              `You cannot have the slug names "${slug}" and "${nextSlug}" differ only by non-word symbols within a single dynamic path`
-            )
-          }
-        })
-
-        slugNames.push(nextSlug)
-      }
-
-      if (isCatchAll) {
-        if (isOptional) {
-          if (this.restSlugName != null) {
-            throw new Error(
-              `You cannot use both an required and optional catch-all route at the same level ("[...${this.restSlugName}]" and "${urlPaths[0]}" ).`
-            )
-          }
-
-          handleSlug(this.optionalRestSlugName, segmentName)
-          // slugName is kept as it can only be one particular slugName
-          this.optionalRestSlugName = segmentName
-          // nextSegment is overwritten to [[...]] so that it can later be sorted specifically
-          nextSegment = '[[...]]'
-        } else {
-          if (this.optionalRestSlugName != null) {
-            throw new Error(
-              `You cannot use both an optional and required catch-all route at the same level ("[[...${this.optionalRestSlugName}]]" and "${urlPaths[0]}").`
-            )
-          }
-
-          handleSlug(this.restSlugName, segmentName)
-          // slugName is kept as it can only be one particular slugName
-          this.restSlugName = segmentName
-          // nextSegment is overwritten to [...] so that it can later be sorted specifically
-          nextSegment = '[...]'
-        }
-      } else {
-        if (isOptional) {
-          throw new Error(
-            `Optional route parameters are not yet supported ("${urlPaths[0]}").`
-          )
-        }
-        handleSlug(this.slugName, segmentName)
-        // slugName is kept as it can only be one particular slugName
-        this.slugName = segmentName
-        // nextSegment is overwritten to [] so that it can later be sorted specifically
-        nextSegment = '[]'
       }
     }
 
