@@ -29,6 +29,9 @@ export class PagesRouteMatcherProvider extends ManifestRouteMatcherProvider<Page
   protected async transform(
     manifest: Manifest
   ): Promise<ReadonlyArray<PagesRouteMatcher>> {
+    const pageFilter: string[] = process.env.EXPORT_PAGE_FILTER
+      ? JSON.parse(process.env.EXPORT_PAGE_FILTER)
+      : []
     // This matcher is only for Pages routes, not Pages API routes which are
     // included in this manifest.
     const pathnames = Object.keys(manifest)
@@ -43,6 +46,13 @@ export class PagesRouteMatcherProvider extends ManifestRouteMatcherProvider<Page
         if (BLOCKED_PAGES.includes(normalized)) return false
 
         return true
+      })
+      .filter((pathname) => {
+        if (!pageFilter.length) {
+          return true
+        }
+
+        return pageFilter.some((filter) => new RegExp(filter).test(pathname))
       })
 
     const matchers: Array<PagesRouteMatcher> = []
