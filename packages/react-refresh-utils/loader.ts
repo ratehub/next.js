@@ -23,7 +23,7 @@ const ReactRefreshLoader: LoaderDefinition = function ReactRefreshLoader(
     null,
     `${source}\n\n;${
       // Account for commonjs not supporting `import.meta
-      this.resourcePath.endsWith('.cjs')
+      source.indexOf('module.exports') !== -1
         ? commonJsrefreshModuleRuntime
         : refreshModuleRuntime
     }`,
