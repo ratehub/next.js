@@ -3014,6 +3014,7 @@ export default abstract class Server<ServerOptions extends Options = Options> {
       // Ensuring for loading page component routes is done via the matcher.
       shouldEnsure: false,
     })
+
     if (result) {
       getTracer().getRootSpanAttributes()?.set('next.route', pathname)
       try {
@@ -3069,7 +3070,49 @@ export default abstract class Server<ServerOptions extends Options = Options> {
       for await (const match of this.matchers.matchAll(pathname, options)) {
         // when a specific invoke-output is meant to be matched
         // ensure a prior dynamic route/page doesn't take priority
-        const invokeOutput = getRequestMeta(ctx.req, 'invokeOutput')
+        let invokeOutput = getRequestMeta(ctx.req, 'invokeOutput')
+
+        // If loading a dynamic route, fetch all the static paths and cache them in the matcher
+        // We use this to determine if the route actually matches a static path from our dynamic route;
+        // Next normally matches only one dynamic route at the same level, but our fork allows us to have multiple dynamic routes at the same level
+        if (isDynamicRoute(match.definition.pathname) && !match.staticPaths) {
+          const dynamicPageResult = await this.findPageComponents({
+            page: match.definition.page,
+            query,
+            params: match.params ?? {},
+            isAppPath: false,
+          })
+
+          if (!dynamicPageResult) {
+            continue
+          }
+
+          if (!!dynamicPageResult.components.getStaticPaths) {
+            match.staticPaths =
+              await dynamicPageResult.components.getStaticPaths?.({})
+          }
+        }
+
+        // Dynamic routes are distinguished by params, so compare those to our static paths to determine if this
+        // dynamic route matches a static path
+        if (
+          !match.staticPaths ||
+          match.staticPaths.paths.every(
+            (staticPathParam) =>
+              typeof staticPathParam === 'string' ||
+              (JSON.stringify(staticPathParam.params) !==
+                JSON.stringify(match.params) &&
+                // special case for root (/) matching [[...xyz]]
+                Object.keys(match.params ?? {}).length !== 0 &&
+                Object.values(staticPathParam.params ?? {})?.[0]?.length !== 0)
+          )
+        ) {
+          continue
+        } else {
+          // trick next into thinking the next route we loaded is the one that actually matched the static path
+          invokeOutput = match.definition.pathname
+        }
+
         if (
           !this.minimalMode &&
           typeof invokeOutput === 'string' &&

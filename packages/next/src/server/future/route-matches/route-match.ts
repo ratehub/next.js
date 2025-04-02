@@ -1,3 +1,4 @@
+import type { GetStaticPathsResult } from '../../../../types'
 import type { RouteDefinition } from '../route-definitions/route-definition'
 
 /**
@@ -13,4 +14,6 @@ export interface RouteMatch<D extends RouteDefinition = RouteDefinition> {
    * params, it should be considered a static route.
    */
   readonly params: Record<string, string | string[]> | undefined
+
+  staticPaths?: GetStaticPathsResult | undefined
 }
