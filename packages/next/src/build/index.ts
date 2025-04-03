@@ -3168,6 +3168,16 @@ export default async function build(
                 const extraRoutes = additionalSsgPaths.get(page) || []
                 for (const route of extraRoutes) {
                   const pageFile = normalizePagePath(route)
+
+                  try {
+                    await fs.stat(
+                      path.join(exportOptions.outdir, `${pageFile}.html`)
+                    )
+                  } catch (e) {
+                    // this is expected when using NEXT_EXPORT_CONTINUE_ON_ERROR
+                    continue
+                  }
+
                   await moveExportedPage(
                     page,
                     route,

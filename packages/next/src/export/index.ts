@@ -804,11 +804,15 @@ export async function exportAppImpl(
   }
 
   if (renderError) {
-    throw new ExportError(
-      `Export encountered errors on following paths:\n\t${errorPaths
-        .sort()
-        .join('\n\t')}`
-    )
+    const errorMessage = `Export encountered errors on following paths:\n\t${errorPaths
+      .sort()
+      .join('\n\t')}`
+
+    if (!process.env.NEXT_EXPORT_CONTINUE_ON_ERROR) {
+      throw new Error(errorMessage)
+    } else {
+      console.log(errorMessage)
+    }
   }
 
   await fs.writeFile(
