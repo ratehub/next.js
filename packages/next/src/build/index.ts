@@ -876,11 +876,51 @@ export default async function build(
 
       const pagesPaths =
         !appDirOnly && pagesDir
-          ? await nextBuildSpan.traceChild('collect-pages').traceAsyncFn(() =>
-              recursiveReadDir(pagesDir, {
-                pathnameFilter: validFileMatcher.isPageFile,
+          ? await nextBuildSpan
+              .traceChild('collect-pages')
+              .traceAsyncFn(async () => {
+                const pages = await recursiveReadDir(pagesDir, {
+                  pathnameFilter: validFileMatcher.isPageFile,
+                })
+                const pageFilter: string[] = process.env.EXPORT_PAGE_FILTER
+                  ? JSON.parse(process.env.EXPORT_PAGE_FILTER)
+                  : []
+
+                if (!pageFilter.length) {
+                  console.log(
+                    `No export filter provided. Exporting all pages in ${pagesDir}`
+                  )
+                  return pages
+                }
+
+                const specialPages = ['/_document', '/_app', '/_error']
+
+                const filteredPages = pages.filter((page) => {
+                  if (
+                    specialPages.some((specialPage) =>
+                      page.includes(specialPage)
+                    )
+                  ) {
+                    return true
+                  }
+
+                  const isIncluded = pageFilter.some((filter) =>
+                    new RegExp(filter).test(page)
+                  )
+
+                  if (!isIncluded) {
+                    console.log(
+                      `Excluding page ${page} as it doesn't match any filter`
+                    )
+                  }
+
+                  return isIncluded
+                })
+
+                console.log('Filtered pages:', filteredPages)
+
+                return filteredPages
               })
-            )
           : []
 
       const middlewareDetectionRegExp = new RegExp(
