@@ -3087,29 +3087,52 @@ export default abstract class Server<ServerOptions extends Options = Options> {
             continue
           }
 
-          if (!!dynamicPageResult.components.getStaticPaths) {
+          if (dynamicPageResult.components.getStaticPaths) {
             match.staticPaths =
               await dynamicPageResult.components.getStaticPaths?.({})
           }
         }
 
-        // Dynamic routes are distinguished by params, so compare those to our static paths to determine if this
-        // dynamic route matches a static path
-        if (
-          !match.staticPaths ||
-          match.staticPaths.paths.every(
-            (staticPathParam) =>
-              typeof staticPathParam === 'string' ||
-              (JSON.stringify(staticPathParam.params) !==
-                JSON.stringify(match.params) &&
-                // special case for root (/) matching [[...xyz]]
-                Object.keys(match.params ?? {}).length !== 0 &&
-                Object.values(staticPathParam.params ?? {})?.[0]?.length !== 0)
-          )
-        ) {
-          continue
-        } else {
-          // trick next into thinking the next route we loaded is the one that actually matched the static path
+        // In order to match getStaticPaths, remove [...] / [[... ]] from wildcard pages
+        const pageName = match.definition.page.replace(
+          /\/\[{1,2}\.{3}([^\]]+)\]{1,2}/,
+          '$1'
+        )
+
+        // Make it easier to process the static paths by converting complicated structure of array of params by page to a simple array of paths
+        const staticPaths: string[] = (match.staticPaths?.paths ?? []).reduce(
+          (result: string[], staticPath) => {
+            if (!staticPath) {
+              return result
+            }
+
+            if (typeof staticPath === 'string') {
+              result.push(staticPath)
+              return result
+            }
+
+            const params = staticPath.params[pageName]
+
+            if (typeof params === 'string') {
+              result.push(`/${params}`)
+            } else if (Array.isArray(params)) {
+              result.push(`/${params.join('/')}`)
+            }
+
+            return result
+          },
+          []
+        )
+
+        const matchParams = match.params?.[pageName] ?? []
+        const matchPath: string =
+          typeof matchParams === 'string'
+            ? `/${matchParams}`
+            : `/${matchParams.join('/')}`
+
+        // If we've matched the page, but there are no static paths then we can assume it's a static page
+        // Else, its only a true match if the static paths of the dynamic route match the current path
+        if (!staticPaths.length || staticPaths.includes(matchPath)) {
           invokeOutput = match.definition.pathname
         }
 
