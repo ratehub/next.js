@@ -42,7 +42,7 @@ import { pathHasPrefix } from '../../shared/lib/router/utils/path-has-prefix'
 import { removePathPrefix } from '../../shared/lib/router/utils/remove-path-prefix'
 import { Telemetry } from '../../telemetry/storage'
 import { type Span, setGlobal, trace } from '../../trace'
-import { createValidFileMatcher, findPageFile } from '../lib/find-page-file'
+import { findPageFile } from '../lib/find-page-file'
 import { getNodeOptionsWithoutInspect } from '../lib/utils'
 import { withCoalescedInvoke } from '../../lib/coalesced-function'
 import { loadDefaultErrorComponents } from '../load-default-error-components'
@@ -214,14 +214,14 @@ export default class DevServer extends Server {
       this.dir
     )
     const extensions = this.nextConfig.pageExtensions
-    const validFileMatcher = createValidFileMatcher(extensions, appDir)
+    const extensionsExpression = new RegExp(`\\.(?:${extensions.join('|')})$`)
 
     // If the pages directory is available, then configure those matchers.
     if (pagesDir) {
       const fileReader = new BatchedFileReader(
         new DefaultFileReader({
           // Only allow files that have the correct extensions.
-          pathnameFilter: (pathname) => validFileMatcher.isPageFile(pathname),
+          pathnameFilter: (pathname) => extensionsExpression.test(pathname),
         })
       )
 
