@@ -124,7 +124,33 @@ export function createValidFileMatcher(
   }
 
   function isPageFile(filePath: string) {
-    return validExtensionFileRegex.test(filePath) || isMetadataFile(filePath)
+    const isValid =
+      validExtensionFileRegex.test(filePath) || isMetadataFile(filePath)
+
+    if (!isValid) {
+      return false
+    }
+
+    const pageFilter: string[] = process.env.EXPORT_PAGE_FILTER
+      ? JSON.parse(process.env.EXPORT_PAGE_FILTER)
+      : []
+
+    if (!pageFilter.length) {
+      return true
+    }
+
+    const specialPages = ['/_document', '/_app', '/_error']
+
+    // Always include special pages
+    if (specialPages.some((specialPage) => filePath.includes(specialPage))) {
+      return true
+    }
+
+    if (!pageFilter.some((filter) => new RegExp(filter).test(filePath))) {
+      return false
+    }
+
+    return true
   }
 
   function isRootNotFound(filePath: string) {
