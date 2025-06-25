@@ -135,14 +135,7 @@ export function createValidFileMatcher(
     // Omitting files during build in production mode will cause a different build hash which
     // breaks sourcemap generation.
     if (process.env.NODE_ENV === 'production') {
-      console.log(
-        '[find-page-file.isPagefile] Skipping page filter optimization for production mode!'
-      )
       return true
-    } else {
-      console.log(
-        '[find-page-file.isPagefile] Using page filter optimization for development mode!'
-      )
     }
 
     const pageFilter: string[] = process.env.EXPORT_PAGE_FILTER
