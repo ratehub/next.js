@@ -1,6 +1,6 @@
 {
   "name": "@ratehub/next",
-  "version": "14.2.30",
+  "version": "14.2.31",
   "description": "The React Framework",
   "main": "./dist/server/next.js",
   "license": "MIT",
@@ -97,7 +97,7 @@
     "busboy": "1.6.0",
     "caniuse-lite": "^1.0.30001579",
     "graceful-fs": "^4.2.11",
-    "newrelic": "12.17.0",
+    "newrelic": "13.3.3",
     "postcss": "8.4.31",
     "styled-jsx": "5.1.1"
   },
