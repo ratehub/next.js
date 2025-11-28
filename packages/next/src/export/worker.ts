@@ -40,8 +40,6 @@ import {
   TurborepoAccessTraceResult,
 } from '../build/turborepo-access-trace'
 
-import newrelic from 'newrelic'
-
 const envConfig = require('../shared/lib/runtime-config.external')
 
 ;(globalThis as any).__NEXT_DATA__ = {
@@ -333,7 +331,7 @@ async function exportPageImpl(
   }
 }
 
-async function exportPage(
+export default async function exportPage(
   input: ExportPageInput
 ): Promise<ExportPageResult | undefined> {
   // Configure the http agent.
@@ -388,28 +386,6 @@ async function exportPage(
   }
 }
 
-const withNewRelic =
-  (work: Function) =>
-  (args: ExportPageInput): Promise<ExportPageResult | undefined> =>
-    newrelic.startBackgroundTransaction(args.pathMap.page, async () => {
-      const { path, pathMap } = args
-      const { query = {} } = pathMap
-      newrelic.addCustomAttribute('url', path)
-      newrelic.addCustomAttribute('query', serializeQuery(query))
-      const results = await work(args)
-      if (results.error) {
-        newrelic.noticeError(results.error, {
-          url: path,
-          query: serializeQuery(query),
-        })
-      }
-      return results
-    })
-
-function serializeQuery(query: any): string {
-  return query.length ? query.join(', ') : query
-}
-
 process.on('unhandledRejection', (err: unknown) => {
   // if it's a postpone error, it'll be handled later
   // when the postponed promise is actually awaited.
@@ -430,5 +406,3 @@ process.on('rejectionHandled', () => {
   // prefetching patterns to avoid waterfalls. We ignore logging these.
   // We should've already errored in anyway unhandledRejection.
 })
-
-export default withNewRelic(exportPage)
