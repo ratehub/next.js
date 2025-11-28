@@ -1,6 +1,6 @@
 {
   "name": "@ratehub/next",
-  "version": "14.2.31",
+  "version": "14.2.32",
   "description": "The React Framework",
   "main": "./dist/server/next.js",
   "license": "MIT",
